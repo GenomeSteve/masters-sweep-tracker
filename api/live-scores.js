@@ -116,7 +116,13 @@ function mapFromCompetitors(competitors) {
         displayName,
         score,
         today,
-        thru
+        thru,
+        missedCut: /cut|missed cut/i.test(
+          String(competitor?.status?.type?.detail || '') + ' ' +
+          String(competitor?.status?.type?.shortDetail || '')
+          ),
+        roundsCompleted: Array.isArray(competitor?.linescores) ? competitor.linescores.length : 0,
+        statusText: competitor?.status?.type?.detail || competitor?.status?.type?.shortDetail || ''
       };
     }
   }
