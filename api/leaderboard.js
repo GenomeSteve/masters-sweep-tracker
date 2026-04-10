@@ -124,11 +124,10 @@ export default async function handler(req, res) {
       throw new Error('Could not find Masters Tournament in ESPN scoreboard feed.');
     }
 
-    const eventDetails = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/golf/pga/summary?event=${encodeURIComponent(event.id)}`);
-    const competitors = extractCompetitors(eventDetails);
+    const competitors = extractCompetitors(event);
 
     if (!competitors.length) {
-      throw new Error('No player data returned for the Masters summary feed.');
+      throw new Error('No player data returned from the ESPN scoreboard feed.');
     }
 
     const { scores, metadata } = mapFromCompetitors(competitors);
@@ -136,7 +135,7 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 's-maxage=45, stale-while-revalidate=120');
     res.status(200).json({
       ok: true,
-      source: 'ESPN PGA summary feed',
+      source: 'ESPN PGA scoreboard feed',
       eventId: event.id,
       eventName: event.name,
       eventStatus: event?.status?.type?.detail || event?.status?.type?.shortDetail || '',
