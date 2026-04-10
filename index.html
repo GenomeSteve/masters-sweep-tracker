@@ -352,29 +352,41 @@
     }
 
     async function refreshLive() {
-      setStatus("Refreshing live scores...");
-      try {
-        const res = await fetch(LIVE_URL, { cache: "no-store" });
-        const json = await res.json();
-        if (!json.ok) throw new Error(json.error || "Live feed failed.");
-        state.liveScores = json;
-        state.usingSeed = false;
-        els.feedName.textContent = json.source || "Live feed";
-        els.eventName.textContent = json.eventName || "Masters Tournament";
-        els.updatedAt.textContent = new Date(json.updatedAt).toLocaleString("en-GB");
-        els.matchCount.textContent = json.playerCount ?? Object.keys(json.playerScores || {}).length;
-        setStatus(`Live scores loaded. Cut penalties ${json.cutFinalized ? "active" : "inactive"}.`, "good");
-        render();
-      } catch (err) {
-        setStatus(`Live refresh failed: ${err.message}. Showing workbook scores.`, "bad");
-        state.usingSeed = true;
-        els.feedName.textContent = "Workbook fallback";
-        els.eventName.textContent = "Seed scores from XLSX";
-        els.updatedAt.textContent = "—";
-        els.matchCount.textContent = "—";
-        render();
-      }
+  setStatus("Refreshing live scores...");
+  try {
+    const res = await fetch(LIVE_URL, { cache: "no-store" });
+    const text = await res.text();
+
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new Error(`API did not return JSON (${res.status}). First 120 chars: ${text.slice(0, 120)}`);
     }
+
+    if (!json.ok) throw new Error(json.error || `Live feed failed (${res.status}).`);
+
+    state.liveScores = json;
+    state.usingSeed = false;
+    els.feedName.textContent = json.source || "Live feed";
+    els.eventName.textContent = json.eventName || "Masters Tournament";
+    els.updatedAt.textContent = json.updatedAt
+      ? new Date(json.updatedAt).toLocaleString("en-GB")
+      : "—";
+    els.matchCount.textContent = json.playerCount ?? Object.keys(json.playerScores || {}).length;
+    setStatus(`Live scores loaded. Cut penalties ${json.cutFinalized ? "active" : "inactive"}.`, "good");
+    render();
+  } catch (err) {
+    setStatus(`Live refresh failed: ${err.message}. Showing workbook scores.`, "bad");
+    state.usingSeed = true;
+    els.feedName.textContent = "Workbook fallback";
+    els.eventName.textContent = "Seed scores from XLSX";
+    els.updatedAt.textContent = "—";
+    els.matchCount.textContent = "—";
+    render();
+  }
+}
+
 
     async function init() {
       await loadTeams();
