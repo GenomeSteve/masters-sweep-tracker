@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "api/leaderboard.js": {
+      "runtime": "@vercel/node@5.3.24",
+      "memory": 512,
+      "maxDuration": 10
+    }
+  }
+}

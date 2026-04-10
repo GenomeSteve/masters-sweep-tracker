@@ -1,0 +1,322 @@
+[
+  {
+    "team": "Taylor",
+    "players": [
+      "Ludvig Åberg",
+      "Patrick Reed",
+      "Jason Day",
+      "Max Homa",
+      "Wyndham Clark",
+      "Michael Kim"
+    ],
+    "seedScores": [
+      2,
+      -3,
+      -3,
+      0,
+      0,
+      3
+    ],
+    "seedBest4": -6
+  },
+  {
+    "team": "Sam",
+    "players": [
+      "Scottie Scheffler",
+      "Robert MacIntyre",
+      "Sam Burns",
+      "Marco Penge",
+      "Ryan Fox",
+      "Kurt Kitayama"
+    ],
+    "seedScores": [
+      -2,
+      8,
+      -5,
+      4,
+      5,
+      -3
+    ],
+    "seedBest4": -6
+  },
+  {
+    "team": "Rob",
+    "players": [
+      "Scottie Scheffler",
+      "Chris Gotterup",
+      "Tyrrell Hatton",
+      "Marco Penge",
+      "Ryan Gerard",
+      "Kurt Kitayama"
+    ],
+    "seedScores": [
+      -2,
+      0,
+      2,
+      4,
+      0,
+      -3
+    ],
+    "seedBest4": -5
+  },
+  {
+    "team": "Sean",
+    "players": [
+      "Jon Rahm",
+      "Patrick Reed",
+      "Sepp Straka",
+      "J.J. Spaun",
+      "Brian Harman",
+      "Kurt Kitayama"
+    ],
+    "seedScores": [
+      6,
+      -3,
+      1,
+      2,
+      7,
+      -3
+    ],
+    "seedBest4": -3
+  },
+  {
+    "team": "Innes",
+    "players": [
+      "Scottie Scheffler",
+      "Viktor Hovland",
+      "Tyrrell Hatton",
+      "Cameron Smith",
+      "Dustin Johnson",
+      "Charl Schwartzel"
+    ],
+    "seedScores": [
+      -2,
+      3,
+      2,
+      2,
+      1,
+      3
+    ],
+    "seedBest4": 3
+  },
+  {
+    "team": "Ross",
+    "players": [
+      "Scottie Scheffler",
+      "Hideki Matsuyama",
+      "Adam Scott",
+      "Cameron Smith",
+      "Dustin Johnson",
+      "Charl Schwartzel"
+    ],
+    "seedScores": [
+      -2,
+      0,
+      0,
+      2,
+      1,
+      3
+    ],
+    "seedBest4": -1
+  },
+  {
+    "team": "Ryan",
+    "players": [
+      "Justin Rose",
+      "Robert MacIntyre",
+      "Corey Conners",
+      "Jake Knapp",
+      "Aaron Rai",
+      "Aldrich Potgieter"
+    ],
+    "seedScores": [
+      -2,
+      8,
+      3,
+      1,
+      -1,
+      12
+    ],
+    "seedBest4": 1
+  },
+  {
+    "team": "Jason",
+    "players": [
+      "Jon Rahm",
+      "Hideki Matsuyama",
+      "Corey Conners",
+      "Harris English",
+      "Wyndham Clark",
+      "Carlos Ortiz"
+    ],
+    "seedScores": [
+      6,
+      0,
+      3,
+      1,
+      0,
+      8
+    ],
+    "seedBest4": 4
+  },
+  {
+    "team": "ZB",
+    "players": [
+      "Xander Schauffele",
+      "Min Woo Lee",
+      "Sepp Straka",
+      "Nicolai Højgaard",
+      "Brian Harman",
+      "Nick Taylor"
+    ],
+    "seedScores": [
+      -2,
+      6,
+      1,
+      4,
+      7,
+      -1
+    ],
+    "seedBest4": 2
+  },
+  {
+    "team": "Angus",
+    "players": [
+      "Justin Rose",
+      "Patrick Reed",
+      "Jason Day",
+      "J.J. Spaun",
+      "Brian Harman",
+      "Mateo Pulcini"
+    ],
+    "seedScores": [
+      -2,
+      -3,
+      -3,
+      2,
+      7,
+      9
+    ],
+    "seedBest4": -6
+  },
+  {
+    "team": "Matt",
+    "players": [
+      "Justin Rose",
+      "Shane Lowry",
+      "Adam Scott",
+      "Marco Penge",
+      "Keegan Bradley",
+      "Ethan Fang"
+    ],
+    "seedScores": [
+      -2,
+      -2,
+      0,
+      4,
+      0,
+      2
+    ],
+    "seedBest4": -4
+  },
+  {
+    "team": "Stephen",
+    "players": [
+      "Scottie Scheffler",
+      "Jordan Spieth",
+      "Adam Scott",
+      "Max Homa",
+      "Sergio García",
+      "Zach Johnson"
+    ],
+    "seedScores": [
+      -2,
+      0,
+      0,
+      0,
+      0,
+      3
+    ],
+    "seedBest4": -2
+  },
+  {
+    "team": "Blair",
+    "players": [
+      "Jon Rahm",
+      "Hideki Matsuyama",
+      "Corey Conners",
+      "Maverick McNealy",
+      "Wyndham Clark",
+      "Sami Välimäki"
+    ],
+    "seedScores": [
+      6,
+      0,
+      3,
+      5,
+      0,
+      8
+    ],
+    "seedBest4": 8
+  },
+  {
+    "team": "Kyle",
+    "players": [
+      "Scottie Scheffler",
+      "Viktor Hovland",
+      "Sungjae Im",
+      "Max Homa",
+      "Keegan Bradley",
+      "Tom McKibbin"
+    ],
+    "seedScores": [
+      -2,
+      3,
+      4,
+      0,
+      0,
+      3
+    ],
+    "seedBest4": 1
+  },
+  {
+    "team": "Kerr",
+    "players": [
+      "Tommy Fleetwood",
+      "Akshay Bhatia",
+      "Tyrrell Hatton",
+      "Nicolai Højgaard",
+      "Dustin Johnson",
+      "Michael Kim"
+    ],
+    "seedScores": [
+      -1,
+      1,
+      2,
+      4,
+      1,
+      3
+    ],
+    "seedBest4": 3
+  },
+  {
+    "team": "Ben",
+    "players": [
+      "Scottie Scheffler",
+      "Hideki Matsuyama",
+      "Patrick Cantlay",
+      "Jake Knapp",
+      "Alex Noren",
+      "Harry Hall"
+    ],
+    "seedScores": [
+      -2,
+      0,
+      5,
+      1,
+      5,
+      5
+    ],
+    "seedBest4": 4
+  }
+]

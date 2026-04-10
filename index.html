@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Masters Sweep Tracker</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #121922;
+      --panel-2: #18212c;
+      --text: #e9eef5;
+      --muted: #a9b4c2;
+      --line: #2a3542;
+      --good: #4ade80;
+      --warn: #facc15;
+      --bad: #f87171;
+      --accent: #60a5fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #0b0f14 0%, #0f1620 100%);
+      color: var(--text);
+      font: 14px/1.45 Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .wrap { max-width: 1350px; margin: 0 auto; padding: 24px; }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.3fr .7fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .card {
+      background: rgba(18, 25, 34, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.24);
+    }
+    h1, h2, h3 { margin: 0 0 10px; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 18px; }
+    .sub { color: var(--muted); max-width: 72ch; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    button {
+      border: 1px solid #36506f;
+      background: #17314f;
+      color: white;
+      border-radius: 12px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.secondary { background: transparent; border-color: var(--line); color: var(--text); }
+    .status {
+      display: grid;
+      gap: 8px;
+      align-content: start;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: centre;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      width: fit-content;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+    tbody tr:hover { background: rgba(255,255,255,.03); }
+    .rank {
+      width: 32px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .score.good { color: var(--good); font-weight: 700; }
+    .score.bad { color: var(--bad); font-weight: 700; }
+    .score.even { color: var(--text); font-weight: 700; }
+    .tiny { font-size: 12px; color: var(--muted); }
+    .player-cell { min-width: 250px; }
+    .best4 { color: var(--good); font-weight: 700; }
+    .bench { color: var(--muted); }
+    .section-title { display:flex; justify-content:space-between; align-items:end; gap:12px; margin-bottom:10px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .footer { margin-top: 16px; color: var(--muted); font-size: 12px; }
+    @media (max-width: 980px) {
+      .hero, .grid { grid-template-columns: 1fr; }
+      .wrap { padding: 14px; }
+      h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <section class="card">
+        <h1>Masters Sweep Tracker</h1>
+        <div class="sub">Live standings for your sweepstake using the original XLSX picks. The serverless endpoint fetches current Masters scores, then this page calculates each team’s <strong>best 4 of 6</strong>.</div>
+        <div class="controls">
+          <button id="refreshBtn">Refresh live scores</button>
+          <button id="seedBtn" class="secondary">Use workbook scores</button>
+        </div>
+      </section>
+      <section class="card status">
+        <div class="pill" id="statusPill">Loading…</div>
+        <div><strong>Feed:</strong> <span id="feedName">-</span></div>
+        <div><strong>Event:</strong> <span id="eventName">-</span></div>
+        <div><strong>Updated:</strong> <span id="updatedAt">-</span></div>
+        <div><strong>Players matched:</strong> <span id="matchCount">-</span></div>
+      </section>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <div class="section-title">
+          <h2>Standings</h2>
+          <div class="tiny">Lower is better</div>
+        </div>
+        <div style="overflow:auto; max-height: 70vh;">
+          <table>
+            <thead>
+              <tr>
+                <th class="rank">#</th>
+                <th>Team</th>
+                <th>Best 4</th>
+                <th>All 6</th>
+                <th>Counted players</th>
+              </tr>
+            </thead>
+            <tbody id="standingsBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-title">
+          <h2>Team breakdown</h2>
+          <div class="tiny">Green rows count towards the total</div>
+        </div>
+        <div style="overflow:auto; max-height: 70vh;">
+          <table>
+            <thead>
+              <tr>
+                <th>Team</th>
+                <th class="player-cell">Players</th>
+              </tr>
+            </thead>
+            <tbody id="teamsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">
+      Built from your uploaded workbook. Intended for deployment on Vercel so the browser reads <span class="mono">/api/leaderboard</span> on the same origin rather than scraping third-party sites directly.
+    </div>
+  </div>
+
+  <script>
+    const TEAMS_URL = './data/teams.json';
+    const LIVE_URL = './api/leaderboard';
+
+    const els = {
+      standingsBody: document.getElementById('standingsBody'),
+      teamsBody: document.getElementById('teamsBody'),
+      statusPill: document.getElementById('statusPill'),
+      feedName: document.getElementById('feedName'),
+      eventName: document.getElementById('eventName'),
+      updatedAt: document.getElementById('updatedAt'),
+      matchCount: document.getElementById('matchCount'),
+      refreshBtn: document.getElementById('refreshBtn'),
+      seedBtn: document.getElementById('seedBtn')
+    };
+
+    const state = {
+      teams: [],
+      liveScores: null,
+      usingSeed: false
+    };
+
+    function normaliseName(name) {
+      return String(name || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/&amp;/gi, '&')
+        .replace(/[^a-zA-Z0-9& ]+/g, ' ')
+        .replace(/\bjj\b/gi, 'j j')
+        .replace(/\bmin woo\b/gi, 'minwoo')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    }
+
+    function scoreClass(value) {
+      if (value === null || value === undefined || Number.isNaN(value)) return '';
+      if (value < 0) return 'good';
+      if (value > 0) return 'bad';
+      return 'even';
+    }
+
+    function fmt(value) {
+      if (value === null || value === undefined || Number.isNaN(value)) return '—';
+      if (value === 0) return 'E';
+      return value > 0 ? `+${value}` : `${value}`;
+    }
+
+    function getPlayerScore(player, seedScore) {
+      if (state.usingSeed || !state.liveScores?.playerScores) return seedScore;
+      const key = normaliseName(player);
+      const live = state.liveScores.playerScores[key];
+      return live ?? seedScore;
+    }
+
+    function computeRows() {
+      return state.teams.map(team => {
+        const players = team.players.map((player, idx) => ({
+          name: player,
+          score: getPlayerScore(player, team.seedScores[idx]),
+          seedScore: team.seedScores[idx]
+        }));
+
+        const sortable = players
+          .map((p, idx) => ({ ...p, idx }))
+          .filter(p => typeof p.score === 'number' && Number.isFinite(p.score))
+          .sort((a, b) => a.score - b.score);
+
+        const countedIdx = new Set(sortable.slice(0, 4).map(p => p.idx));
+        const best4 = sortable.slice(0, 4).reduce((sum, p) => sum + p.score, 0);
+        const all6 = players.reduce((sum, p) => sum + (typeof p.score === 'number' ? p.score : 0), 0);
+
+        return {
+          team: team.team,
+          players,
+          countedIdx,
+          best4: sortable.length >= 4 ? best4 : null,
+          all6,
+          countedNames: sortable.slice(0, 4).map(p => p.name)
+        };
+      }).sort((a, b) => {
+        if (a.best4 === null && b.best4 === null) return a.team.localeCompare(b.team);
+        if (a.best4 === null) return 1;
+        if (b.best4 === null) return -1;
+        if (a.best4 !== b.best4) return a.best4 - b.best4;
+        return a.all6 - b.all6;
+      });
+    }
+
+    function render() {
+      const rows = computeRows();
+
+      els.standingsBody.innerHTML = rows.map((row, i) => `
+        <tr>
+          <td class="rank">${i + 1}</td>
+          <td><strong>${row.team}</strong></td>
+          <td class="score ${scoreClass(row.best4)}">${fmt(row.best4)}</td>
+          <td class="score ${scoreClass(row.all6)}">${fmt(row.all6)}</td>
+          <td class="tiny">${row.countedNames.join(', ')}</td>
+        </tr>
+      `).join('');
+
+      els.teamsBody.innerHTML = rows.map(row => {
+        const html = row.players.map((p, idx) => {
+          const cls = row.countedIdx.has(idx) ? 'best4' : 'bench';
+          return `<div class="${cls}">${p.name}: <span class="score ${scoreClass(p.score)}">${fmt(p.score)}</span></div>`;
+        }).join('');
+        return `
+          <tr>
+            <td><strong>${row.team}</strong><div class="tiny">Best 4: <span class="score ${scoreClass(row.best4)}">${fmt(row.best4)}</span></div></td>
+            <td class="player-cell">${html}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function setStatus(text, tone = 'neutral') {
+      els.statusPill.textContent = text;
+      els.statusPill.style.color = tone === 'good' ? 'var(--good)' : tone === 'bad' ? 'var(--bad)' : tone === 'warn' ? 'var(--warn)' : 'var(--muted)';
+      els.statusPill.style.borderColor = tone === 'good' ? 'rgba(74, 222, 128, .4)' : tone === 'bad' ? 'rgba(248, 113, 113, .4)' : 'var(--line)';
+    }
+
+    async function loadTeams() {
+      const res = await fetch(TEAMS_URL, { cache: 'no-store' });
+      state.teams = await res.json();
+    }
+
+    async function refreshLive() {
+      setStatus('Refreshing live scores…');
+      try {
+        const res = await fetch(LIVE_URL, { cache: 'no-store' });
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.error || 'Live feed failed.');
+        state.liveScores = json;
+        state.usingSeed = false;
+        els.feedName.textContent = json.source || 'Live feed';
+        els.eventName.textContent = json.eventName || 'Masters Tournament';
+        els.updatedAt.textContent = new Date(json.updatedAt).toLocaleString('en-GB');
+        els.matchCount.textContent = json.playerCount ?? Object.keys(json.playerScores || {}).length;
+        setStatus('Live scores loaded', 'good');
+        render();
+      } catch (err) {
+        setStatus(`Live refresh failed: ${err.message}. Showing workbook scores.`, 'bad');
+        state.usingSeed = true;
+        els.feedName.textContent = 'Workbook fallback';
+        els.eventName.textContent = 'Seed scores from XLSX';
+        els.updatedAt.textContent = '—';
+        els.matchCount.textContent = '—';
+        render();
+      }
+    }
+
+    async function init() {
+      await loadTeams();
+      state.usingSeed = true;
+      render();
+      await refreshLive();
+      setInterval(refreshLive, 90000);
+    }
+
+    els.refreshBtn.addEventListener('click', refreshLive);
+    els.seedBtn.addEventListener('click', () => {
+      state.usingSeed = true;
+      setStatus('Showing workbook scores', 'warn');
+      els.feedName.textContent = 'Workbook fallback';
+      els.eventName.textContent = 'Seed scores from XLSX';
+      els.updatedAt.textContent = '—';
+      els.matchCount.textContent = '—';
+      render();
+    });
+
+    init();
+  </script>
+</body>
+</html>
