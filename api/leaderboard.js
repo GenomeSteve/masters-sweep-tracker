@@ -1,40 +1,237 @@
-function normaliseName(name) {
+export default async function handler(req, res) {
+  try {
+    const scoreboard = await fetchJson(
+      'https://site.api.espn.com/apis/site/v2/sports/golf/pga/scoreboard'
+    );
+
+    const events = buildEventList(scoreboard);
+    const event = pickMastersEvent(events);
+
+    if (!event?.id) {
+      throw new Error('Could not find Masters Tournament in ESPN scoreboard feed.');
+    }
+
+    const competitors = extractCompetitors(event);
+
+    if (!competitors.length) {
+      throw new Error('No player data returned from the ESPN scoreboard feed.');
+    }
+
+    const { scores, metadata } = mapFromCompetitors(competitors);
+
+    res.setHeader('Cache-Control', 's-maxage=45, stale-while-revalidate=120');
+    return res.status(200).json({
+      ok: true,
+      source: 'ESPN PGA scoreboard feed',
+      eventId: event.id,
+      eventName: event.name || 'Masters Tournament',
+      eventStatus: event?.status?.type?.detail || event?.status?.type?.shortDetail || '',
+      updatedAt: new Date().toISOString(),
+      playerScores: scores,
+      playerMeta: metadata,
+      playerCount: Object.keys(metadata).length
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error: error?.message || 'Unknown live fetch failure.'
+    });
+  }
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0',
+      'Accept': 'application/json,text/plain,*/*'
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} from ${url}`);
+  }
+
+  return response.json();
+}
+
+function buildEventList(scoreboard) {
+  if (!scoreboard) return [];
+
+  if (Array.isArray(scoreboard.events)) {
+    return scoreboard.events;
+  }
+
+  if (scoreboard.event) {
+    return [scoreboard.event];
+  }
+
+  return [];
+}
+
+function pickMastersEvent(events) {
+  if (!Array.isArray(events) || !events.length) return null;
+
+  const normalise = (value) =>
+    String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+
+  const mastersByName = events.find((event) => {
+    const name = normalise(
+      event?.name ||
+      event?.shortName ||
+      event?.displayName ||
+      event?.season?.type?.name
+    );
+
+    return (
+      name.includes('masters tournament') ||
+      name === 'masters' ||
+      name.includes('the masters')
+    );
+  });
+
+  if (mastersByName) return mastersByName;
+
+  const mastersById = events.find((event) => String(event?.id) === '401811941');
+  if (mastersById) return mastersById;
+
+  return events[0] || null;
+}
+
+function extractCompetitors(event) {
+  const competitors =
+    event?.competitions?.[0]?.competitors ||
+    event?.competitors ||
+    [];
+
+  return Array.isArray(competitors) ? competitors : [];
+}
+
+function mapFromCompetitors(competitors) {
+  const scores = {};
+  const metadata = {};
+
+  for (const competitor of competitors) {
+    const athlete = competitor?.athlete || competitor?.player || {};
+    const rawName =
+      athlete?.displayName ||
+      athlete?.shortName ||
+      competitor?.displayName ||
+      competitor?.name ||
+      '';
+
+    const cleanName = normalisePlayerName(rawName);
+    if (!cleanName) continue;
+
+    const numericScore = parseScore(competitor);
+
+    if (numericScore === null) continue;
+
+    scores[cleanName] = numericScore;
+    metadata[cleanName] = {
+      rawName,
+      position:
+        competitor?.curatedRank?.current ||
+        competitor?.order ||
+        competitor?.rank ||
+        '',
+      toPar:
+        competitor?.score?.displayValue ??
+        competitor?.score ??
+        '',
+      thru:
+        competitor?.linescores?.length
+          ? competitor.linescores.length
+          : competitor?.status?.type?.shortDetail || '',
+      today:
+        competitor?.statistics?.find?.((s) =>
+          String(s?.name || '').toLowerCase().includes('today')
+        )?.displayValue || ''
+    };
+
+    const altNames = buildAltNames(rawName);
+    for (const altName of altNames) {
+      if (!(altName in scores)) {
+        scores[altName] = numericScore;
+        metadata[altName] = metadata[cleanName];
+      }
+    }
+  }
+
+  return { scores, metadata };
+}
+
+function parseScore(competitor) {
+  const candidates = [
+    competitor?.score?.value,
+    competitor?.scoreValue,
+    competitor?.toPar,
+    competitor?.statistics?.find?.((s) =>
+      String(s?.name || '').toLowerCase().includes('to par')
+    )?.value
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate === 0) return 0;
+    if (candidate === '0') return 0;
+    if (candidate === 'E' || candidate === 'EVEN') return 0;
+
+    const num = Number(candidate);
+    if (Number.isFinite(num)) return num;
+  }
+
+  const display =
+    competitor?.score?.displayValue ??
+    competitor?.score ??
+    competitor?.displayScore ??
+    '';
+
+  if (typeof display === 'string') {
+    const trimmed = display.trim().toUpperCase();
+    if (trimmed === 'E') return 0;
+
+    const match = trimmed.match(/^([+-]?\d+)$/);
+    if (match) {
+      return Number(match[1]);
+    }
+  }
+
+  return null;
+}
+
+function normalisePlayerName(name) {
   return String(name || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/&amp;/gi, '&')
-    .replace(/[^a-zA-Z0-9& ]+/g, ' ')
-    .replace(/\bjj\b/gi, 'j j')
-    .replace(/\bmin woo\b/gi, 'minwoo')
-    .replace(/\bmacintyre\b/gi, 'macintyre')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
 }
 
-function aliasesFor(name) {
-  const base = String(name || '').trim();
-  const out = new Set([base, normaliseName(base)]);
+function buildAltNames(rawName) {
+  const clean = String(rawName || '').replace(/\s+/g, ' ').trim();
+  if (!clean) return [];
 
-  const manual = {
-    'Ludvig Åberg': ['Ludvig Aberg'],
-    'Nicolai Højgaard': ['Nicolai Hojgaard'],
-    'Sami Välimäki': ['Sami Valimaki'],
-    'Sergio García': ['Sergio Garcia'],
-    'Min Woo Lee': ['Minwoo Lee'],
-    'J.J. Spaun': ['JJ Spaun', 'J J Spaun'],
-    'Bryson DeChambeau': ['Bryson Dechambeau'],
-    'Tom McKibbin': ['Tom Mckibbin']
-  };
+  const parts = clean.split(' ');
+  if (parts.length < 2) return [];
 
-  (manual[base] || []).forEach((v) => {
-    out.add(v);
-    out.add(normaliseName(v));
-  });
+  const first = parts[0];
+  const last = parts[parts.length - 1];
+  const middle = parts.slice(1, -1).join(' ');
 
-  const cleaned = base
-    .replace(/Å/g, 'A')
-    .replace(/å/g, 'a')
+  const variants = new Set();
+
+  variants.add(normalisePlayerName(clean));
+  variants.add(normalisePlayerName(`${first} ${last}`));
+  variants.add(normalisePlayerName(`${first[0]}. ${last}`));
+  variants.add(normalisePlayerName(`${first[0]} ${last}`));
+
+  if (middle) {
+    variants.add(normalisePlayerName(`${first} ${middle} ${last}`));
+  }
+
+  return [...variants].filter(Boolean);
+}    .replace(/å/g, 'a')
     .replace(/ø/g, 'o')
     .replace(/Ø/g, 'O')
     .replace(/ö/g, 'o')
