@@ -60,7 +60,7 @@
     }
     .pill {
       display: inline-flex;
-      align-items: centre;
+      align-items: center;
       gap: 8px;
       padding: 8px 10px;
       border-radius: 999px;
@@ -99,6 +99,8 @@
     .player-cell { min-width: 250px; }
     .best4 { color: var(--good); font-weight: 700; }
     .bench { color: var(--muted); }
+    .player-entry { margin-bottom: 8px; }
+    .player-entry:last-child { margin-bottom: 0; }
     .section-title { display:flex; justify-content:space-between; align-items:end; gap:12px; margin-bottom:10px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .footer { margin-top: 16px; color: var(--muted); font-size: 12px; }
@@ -121,7 +123,7 @@
         </div>
       </section>
       <section class="card status">
-        <div class="pill" id="statusPill">Loading…</div>
+        <div class="pill" id="statusPill">Loading...</div>
         <div><strong>Feed:</strong> <span id="feedName">-</span></div>
         <div><strong>Event:</strong> <span id="eventName">-</span></div>
         <div><strong>Updated:</strong> <span id="updatedAt">-</span></div>
@@ -171,24 +173,24 @@
     </div>
 
     <div class="footer">
-      Built from your uploaded workbook. Intended for deployment on Vercel so the browser reads <span class="mono">/api/leaderboard</span> on the same origin rather than scraping third-party sites directly.
+      Built from your uploaded workbook. Intended for deployment on Vercel so the browser reads <span class="mono">/api/live-scores</span> on the same origin rather than scraping third-party sites directly.
     </div>
   </div>
 
   <script>
-    const TEAMS_URL = './data/teams.json';
-    const LIVE_URL = './api/live-scores';
+    const TEAMS_URL = "./data/teams.json";
+    const LIVE_URL = "./api/live-scores";
 
     const els = {
-      standingsBody: document.getElementById('standingsBody'),
-      teamsBody: document.getElementById('teamsBody'),
-      statusPill: document.getElementById('statusPill'),
-      feedName: document.getElementById('feedName'),
-      eventName: document.getElementById('eventName'),
-      updatedAt: document.getElementById('updatedAt'),
-      matchCount: document.getElementById('matchCount'),
-      refreshBtn: document.getElementById('refreshBtn'),
-      seedBtn: document.getElementById('seedBtn')
+      standingsBody: document.getElementById("standingsBody"),
+      teamsBody: document.getElementById("teamsBody"),
+      statusPill: document.getElementById("statusPill"),
+      feedName: document.getElementById("feedName"),
+      eventName: document.getElementById("eventName"),
+      updatedAt: document.getElementById("updatedAt"),
+      matchCount: document.getElementById("matchCount"),
+      refreshBtn: document.getElementById("refreshBtn"),
+      seedBtn: document.getElementById("seedBtn")
     };
 
     const state = {
@@ -198,78 +200,98 @@
     };
 
     function normaliseName(name) {
-      return String(name || '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/&amp;/gi, '&')
-        .replace(/[^a-zA-Z0-9& ]+/g, ' ')
-        .replace(/\bjj\b/gi, 'j j')
-        .replace(/\bmin woo\b/gi, 'minwoo')
-        .replace(/\s+/g, ' ')
+      return String(name || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/&amp;/gi, "&")
+        .replace(/[^a-zA-Z0-9& ]+/g, " ")
+        .replace(/\bjj\b/gi, "j j")
+        .replace(/\bmin woo\b/gi, "minwoo")
+        .replace(/\s+/g, " ")
         .trim()
         .toLowerCase();
     }
 
     function scoreClass(value) {
-      if (value === null || value === undefined || Number.isNaN(value)) return '';
-      if (value < 0) return 'good';
-      if (value > 0) return 'bad';
-      return 'even';
+      if (value === null || value === undefined || Number.isNaN(value)) return "";
+      if (value < 0) return "good";
+      if (value > 0) return "bad";
+      return "even";
     }
 
     function fmt(value) {
-      if (value === null || value === undefined || Number.isNaN(value)) return '—';
-      if (value === 0) return 'E';
+      if (value === null || value === undefined || Number.isNaN(value)) return "—";
+      if (value === 0) return "E";
       return value > 0 ? `+${value}` : `${value}`;
     }
 
-    function getPlayerScore(player, seedScore) {
-      if (state.usingSeed || !state.liveScores?.playerScores) return seedScore;
-    
-      const key = normaliseName(player);
-      const live = state.liveScores.playerScores[key];
-      const meta = state.liveScores.playerMeta?.[key];
-    
-      if (live === undefined || live === null) return seedScore;
-    
-      let adjusted = live;
-    
-      const missedCut = !!meta?.missedCut;
-      const roundsCompleted = Number(meta?.roundsCompleted || 0);
-      const totalRounds = 4;
-    
-      if (missedCut) {
-        const remainingRounds = Math.max(0, totalRounds - roundsCompleted);
-        adjusted += remainingRounds * 10;
-      }
-    
-      return adjusted;
+    function areCutPenaltiesActive() {
+      return !state.usingSeed && state.liveScores?.cutFinalized === true;
+    }
+
+    function getPlayerResult(player, seedScore) {
+      if (state.usingSeed || !state.liveScores?.playerScores) {
+        return {
+          baseScore: seedScore,
+          penalty: 0,
+          score: seedScore,
+          meta: null
+        };
       }
 
+      const key = normaliseName(player);
+      const live = state.liveScores.playerScores[key];
+      const meta = state.liveScores.playerMeta?.[key] || null;
+
+      if (live === undefined || live === null) {
+        return {
+          baseScore: seedScore,
+          penalty: 0,
+          score: seedScore,
+          meta: null
+        };
+      }
+
+      let penalty = 0;
+      if (areCutPenaltiesActive() && meta?.missedCut) {
+        const roundsCompleted = Number(meta?.roundsCompleted || 0);
+        penalty = Math.max(0, 4 - roundsCompleted) * 10;
+      }
+
+      return {
+        baseScore: live,
+        penalty,
+        score: live + penalty,
+        meta
+      };
+    }
+
     function computeRows() {
-      return state.teams.map(team => {
+      return state.teams.map((team) => {
         const players = team.players.map((player, idx) => ({
           name: player,
-          score: getPlayerScore(player, team.seedScores[idx]),
-          seedScore: team.seedScores[idx]
+          seedScore: team.seedScores[idx],
+          ...getPlayerResult(player, team.seedScores[idx])
         }));
 
         const sortable = players
           .map((p, idx) => ({ ...p, idx }))
-          .filter(p => typeof p.score === 'number' && Number.isFinite(p.score))
+          .filter((p) => typeof p.score === "number" && Number.isFinite(p.score))
           .sort((a, b) => a.score - b.score);
 
-        const countedIdx = new Set(sortable.slice(0, 4).map(p => p.idx));
-        const best4 = sortable.slice(0, 4).reduce((sum, p) => sum + p.score, 0);
-        const all6 = players.reduce((sum, p) => sum + (typeof p.score === 'number' ? p.score : 0), 0);
+        const countedIdx = new Set(sortable.slice(0, 4).map((p) => p.idx));
+        const best4 = sortable.length >= 4
+          ? sortable.slice(0, 4).reduce((sum, p) => sum + p.score, 0)
+          : null;
+        const all6 = players.reduce((sum, p) => sum + (Number.isFinite(p.score) ? p.score : 0), 0);
 
         return {
           team: team.team,
           players,
           countedIdx,
-          best4: sortable.length >= 4 ? best4 : null,
+          best4,
           all6,
-          countedNames: sortable.slice(0, 4).map(p => p.name)
+          countedNames: sortable.slice(0, 4).map((p) => p.name)
         };
       }).sort((a, b) => {
         if (a.best4 === null && b.best4 === null) return a.team.localeCompare(b.team);
@@ -289,56 +311,67 @@
           <td><strong>${row.team}</strong></td>
           <td class="score ${scoreClass(row.best4)}">${fmt(row.best4)}</td>
           <td class="score ${scoreClass(row.all6)}">${fmt(row.all6)}</td>
-          <td class="tiny">${row.countedNames.join(', ')}</td>
+          <td class="tiny">${row.countedNames.join(", ")}</td>
         </tr>
-      `).join('');
+      `).join("");
 
-      els.teamsBody.innerHTML = rows.map(row => {
+      els.teamsBody.innerHTML = rows.map((row) => {
         const html = row.players.map((p, idx) => {
-          const cls = row.countedIdx.has(idx) ? 'best4' : 'bench';
-          return `<div class="${cls}">${p.name}: <span class="score ${scoreClass(p.score)}">${fmt(p.score)}</span></div>`;
-        }).join('');
+          const cls = row.countedIdx.has(idx) ? "best4" : "bench";
+          const breakdown = p.penalty > 0
+            ? `<div class="tiny">Base ${fmt(p.baseScore)} + penalty ${fmt(p.penalty)} = <strong>${fmt(p.score)}</strong></div>`
+            : `<div class="tiny">Base ${fmt(p.baseScore)}</div>`;
+
+          return `
+            <div class="player-entry ${cls}">
+              <div>${p.name}: <span class="score ${scoreClass(p.score)}">${fmt(p.score)}</span></div>
+              ${breakdown}
+              ${p.meta?.statusText ? `<div class="tiny">${p.meta.statusText}</div>` : ""}
+            </div>
+          `;
+        }).join("");
+
         return `
           <tr>
             <td><strong>${row.team}</strong><div class="tiny">Best 4: <span class="score ${scoreClass(row.best4)}">${fmt(row.best4)}</span></div></td>
             <td class="player-cell">${html}</td>
           </tr>
         `;
-      }).join('');
+      }).join("");
     }
 
-    function setStatus(text, tone = 'neutral') {
+    function setStatus(text, tone = "neutral") {
       els.statusPill.textContent = text;
-      els.statusPill.style.color = tone === 'good' ? 'var(--good)' : tone === 'bad' ? 'var(--bad)' : tone === 'warn' ? 'var(--warn)' : 'var(--muted)';
-      els.statusPill.style.borderColor = tone === 'good' ? 'rgba(74, 222, 128, .4)' : tone === 'bad' ? 'rgba(248, 113, 113, .4)' : 'var(--line)';
+      els.statusPill.style.color = tone === "good" ? "var(--good)" : tone === "bad" ? "var(--bad)" : tone === "warn" ? "var(--warn)" : "var(--muted)";
+      els.statusPill.style.borderColor = tone === "good" ? "rgba(74, 222, 128, .4)" : tone === "bad" ? "rgba(248, 113, 113, .4)" : "var(--line)";
     }
 
     async function loadTeams() {
-      const res = await fetch(TEAMS_URL, { cache: 'no-store' });
+      const res = await fetch(TEAMS_URL, { cache: "no-store" });
       state.teams = await res.json();
     }
 
     async function refreshLive() {
-      setStatus('Refreshing live scores…');
+      setStatus("Refreshing live scores...");
       try {
-        const res = await fetch(LIVE_URL, { cache: 'no-store' });
+        const res = await fetch(LIVE_URL, { cache: "no-store" });
         const json = await res.json();
-        if (!json.ok) throw new Error(json.error || 'Live feed failed.');
+        if (!json.ok) throw new Error(json.error || "Live feed failed.");
         state.liveScores = json;
         state.usingSeed = false;
-        els.feedName.textContent = json.source || 'Live feed';
-        els.eventName.textContent = json.eventName || 'Masters Tournament';
-        els.updatedAt.textContent = new Date(json.updatedAt).toLocaleString('en-GB');
+        els.feedName.textContent = json.source || "Live feed";
+        els.eventName.textContent = json.eventName || "Masters Tournament";
+        els.updatedAt.textContent = new Date(json.updatedAt).toLocaleString("en-GB");
         els.matchCount.textContent = json.playerCount ?? Object.keys(json.playerScores || {}).length;
-        setStatus('Live scores loaded', 'good');
+        setStatus(`Live scores loaded. Cut penalties ${json.cutFinalized ? "active" : "inactive"}.`, "good");
         render();
       } catch (err) {
-        setStatus(`Live refresh failed: ${err.message}. Showing workbook scores.`, 'bad');
+        setStatus(`Live refresh failed: ${err.message}. Showing workbook scores.`, "bad");
         state.usingSeed = true;
-        els.feedName.textContent = 'Workbook fallback';
-        els.eventName.textContent = 'Seed scores from XLSX';
-        els.updatedAt.textContent = '—';
-        els.matchCount.textContent = '—';
+        els.feedName.textContent = "Workbook fallback";
+        els.eventName.textContent = "Seed scores from XLSX";
+        els.updatedAt.textContent = "—";
+        els.matchCount.textContent = "—";
         render();
       }
     }
@@ -351,14 +384,14 @@
       setInterval(refreshLive, 90000);
     }
 
-    els.refreshBtn.addEventListener('click', refreshLive);
-    els.seedBtn.addEventListener('click', () => {
+    els.refreshBtn.addEventListener("click", refreshLive);
+    els.seedBtn.addEventListener("click", () => {
       state.usingSeed = true;
-      setStatus('Showing workbook scores', 'warn');
-      els.feedName.textContent = 'Workbook fallback';
-      els.eventName.textContent = 'Seed scores from XLSX';
-      els.updatedAt.textContent = '—';
-      els.matchCount.textContent = '—';
+      setStatus("Showing workbook scores. Cut penalties inactive.", "warn");
+      els.feedName.textContent = "Workbook fallback";
+      els.eventName.textContent = "Seed scores from XLSX";
+      els.updatedAt.textContent = "—";
+      els.matchCount.textContent = "—";
       render();
     });
 
