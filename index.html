@@ -188,7 +188,14 @@
     <div class="hero">
       <section class="card">
         <h1>Masters Sweep Tracker</h1>
-        <div class="sub">Live standings for your sweepstake using the original XLSX picks. The serverless endpoint fetches current Masters scores, then this page calculates each team’s <strong>best 4 of 6</strong>.</div>
+        <div class="sub">
+          Live standings for your Masters sweepstake using the original XLSX picks. Each team has 6 players, and the leaderboard is based on the <strong>best 4 scores out of 6</strong>, with lower totals ranking higher.
+          <br /><br />
+          If the cut is <strong>not yet finalised</strong>, players simply count on their live tournament score.
+          Once the cut <strong>is finalised</strong>, any player who misses the cut receives a <strong>+10 penalty for each remaining round not played</strong>. For example, a player who is +3 after round 2 and misses the cut becomes +23 overall.
+          <br /><br />
+          The app refreshes live Masters scores from the serverless feed and falls back to workbook seed scores if live data is unavailable.
+          </div>
         <div class="controls">
           <button id="refreshBtn">Refresh live scores</button>
           <button id="seedBtn" class="secondary">Use workbook scores</button>
