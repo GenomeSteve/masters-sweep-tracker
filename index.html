@@ -96,8 +96,27 @@
       border: 1px solid var(--line);
       background: rgba(255,255,255,.03);
     }
-    .summary-box strong { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-    .summary-value { font-size: 18px; font-weight: 700; }
+    .summary-box strong {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .summary-value { font-size: 22px; font-weight: 800; }
+    .summary-box.gold {
+      background: linear-gradient(180deg, rgba(245, 197, 66, .18) 0%, rgba(245, 197, 66, .08) 100%);
+      border-color: rgba(245, 197, 66, .35);
+    }
+    .summary-box.silver {
+      background: linear-gradient(180deg, rgba(203, 213, 225, .18) 0%, rgba(203, 213, 225, .08) 100%);
+      border-color: rgba(203, 213, 225, .35);
+    }
+    .summary-box.bronze {
+      background: linear-gradient(180deg, rgba(205, 127, 50, .20) 0%, rgba(205, 127, 50, .08) 100%);
+      border-color: rgba(205, 127, 50, .35);
+    }
     .grid {
       display: grid;
       grid-template-columns: 1.05fr .95fr;
@@ -153,6 +172,7 @@
       gap: 8px;
       align-items: center;
       min-width: 0;
+      flex-wrap: wrap;
     }
     .badge {
       display: inline-flex;
@@ -189,13 +209,12 @@
       <section class="card">
         <h1>Masters Sweep Tracker</h1>
         <div class="sub">
-          Live standings for your Masters sweepstake using the original XLSX picks. Each team has 6 players, and the leaderboard is based on the <strong>best 4 scores out of 6</strong>, with lower totals ranking higher.
+          Live standings for your Masters sweepstake using the original XLSX picks. Each team has 6 players, but only the <strong>best 4 scores</strong> count towards the leaderboard.
           <br /><br />
-          If the cut is <strong>not yet finalised</strong>, players simply count on their live tournament score.
-          Once the cut <strong>is finalised</strong>, any player who misses the cut receives a <strong>+10 penalty for each remaining round not played</strong>. For example, a player who is +3 after round 2 and misses the cut becomes +23 overall.
+          Before the cut is finalised, all players use their live tournament score. After the cut is finalised, any player who misses the cut gets <strong>+10 for each remaining round not played</strong>. The best 4 adjusted scores still count.
           <br /><br />
-          The app refreshes live Masters scores from the serverless feed and falls back to workbook seed scores if live data is unavailable.
-          </div>
+          The page refreshes live Masters scores automatically and falls back to workbook seed scores if the live feed fails.
+        </div>
         <div class="controls">
           <button id="refreshBtn">Refresh live scores</button>
           <button id="seedBtn" class="secondary">Use workbook scores</button>
@@ -206,6 +225,7 @@
         <div class="pill" id="statusPill">Loading...</div>
         <div class="status-grid">
           <div class="status-row"><span class="status-label">Mode</span><span class="status-value" id="modeText">-</span></div>
+          <div class="status-row"><span class="status-label">Data state</span><span class="status-value" id="dataState">-</span></div>
           <div class="status-row"><span class="status-label">Cut penalties</span><span class="status-value" id="penaltyText">-</span></div>
           <div class="status-row"><span class="status-label">Last live update</span><span class="status-value" id="lastLiveAt">-</span></div>
           <div class="status-row"><span class="status-label">Event</span><span class="status-value" id="eventName">-</span></div>
@@ -216,17 +236,20 @@
     </div>
 
     <section class="summary-strip">
-      <div class="summary-box">
-        <strong>Leader</strong>
+      <div class="summary-box gold">
+        <strong>1st Place</strong>
         <div class="summary-value" id="leaderTeam">-</div>
+        <div class="tiny" id="leaderScore">-</div>
       </div>
-      <div class="summary-box">
-        <strong>Leading Score</strong>
-        <div class="summary-value" id="leaderScore">-</div>
+      <div class="summary-box silver">
+        <strong>2nd Place</strong>
+        <div class="summary-value" id="secondTeam">-</div>
+        <div class="tiny" id="secondScore">-</div>
       </div>
-      <div class="summary-box">
-        <strong>Data State</strong>
-        <div class="summary-value" id="dataState">-</div>
+      <div class="summary-box bronze">
+        <strong>3rd Place</strong>
+        <div class="summary-value" id="thirdTeam">-</div>
+        <div class="tiny" id="thirdScore">-</div>
       </div>
     </section>
 
@@ -290,11 +313,15 @@
       refreshBtn: document.getElementById("refreshBtn"),
       seedBtn: document.getElementById("seedBtn"),
       modeText: document.getElementById("modeText"),
+      dataState: document.getElementById("dataState"),
       penaltyText: document.getElementById("penaltyText"),
       lastLiveAt: document.getElementById("lastLiveAt"),
       leaderTeam: document.getElementById("leaderTeam"),
       leaderScore: document.getElementById("leaderScore"),
-      dataState: document.getElementById("dataState")
+      secondTeam: document.getElementById("secondTeam"),
+      secondScore: document.getElementById("secondScore"),
+      thirdTeam: document.getElementById("thirdTeam"),
+      thirdScore: document.getElementById("thirdScore")
     };
 
     const state = {
@@ -420,6 +447,9 @@
 
     function updateStatusPanel(rows) {
       const leader = rows[0];
+      const second = rows[1];
+      const third = rows[2];
+
       const mode = state.usingSeed
         ? "Workbook fallback"
         : state.staleLive
@@ -427,11 +457,18 @@
           : "Live";
 
       els.modeText.textContent = mode;
+      els.dataState.textContent = mode;
       els.penaltyText.textContent = areCutPenaltiesActive() ? "Active" : "Inactive";
       els.lastLiveAt.textContent = formatDateTime(state.lastLiveUpdatedAt);
-      els.dataState.textContent = mode;
+
       els.leaderTeam.textContent = leader ? leader.team : "—";
       els.leaderScore.textContent = leader ? fmt(leader.best4) : "—";
+
+      els.secondTeam.textContent = second ? second.team : "—";
+      els.secondScore.textContent = second ? fmt(second.best4) : "—";
+
+      els.thirdTeam.textContent = third ? third.team : "—";
+      els.thirdScore.textContent = third ? fmt(third.best4) : "—";
     }
 
     function render() {
