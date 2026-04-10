@@ -225,10 +225,26 @@
 
     function getPlayerScore(player, seedScore) {
       if (state.usingSeed || !state.liveScores?.playerScores) return seedScore;
+    
       const key = normaliseName(player);
       const live = state.liveScores.playerScores[key];
-      return live ?? seedScore;
-    }
+      const meta = state.liveScores.playerMeta?.[key];
+    
+      if (live === undefined || live === null) return seedScore;
+    
+      let adjusted = live;
+    
+      const missedCut = !!meta?.missedCut;
+      const roundsCompleted = Number(meta?.roundsCompleted || 0);
+      const totalRounds = 4;
+    
+      if (missedCut) {
+        const remainingRounds = Math.max(0, totalRounds - roundsCompleted);
+        adjusted += remainingRounds * 10;
+      }
+    
+      return adjusted;
+      }
 
     function computeRows() {
       return state.teams.map(team => {
