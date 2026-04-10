@@ -42,7 +42,7 @@
     h1 { font-size: 28px; }
     h2 { font-size: 18px; }
     .sub { color: var(--muted); max-width: 72ch; }
-    .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; align-items: center; }
     button {
       border: 1px solid #36506f;
       background: #17314f;
@@ -55,7 +55,7 @@
     button.secondary { background: transparent; border-color: var(--line); color: var(--text); }
     .status {
       display: grid;
-      gap: 8px;
+      gap: 10px;
       align-content: start;
     }
     .pill {
@@ -69,6 +69,35 @@
       color: var(--muted);
       width: fit-content;
     }
+    .status-grid {
+      display: grid;
+      gap: 8px;
+    }
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.02);
+      border: 1px solid rgba(255,255,255,.05);
+    }
+    .status-label { color: var(--muted); }
+    .status-value { text-align: right; }
+    .summary-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .summary-box {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+    }
+    .summary-box strong { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .summary-value { font-size: 18px; font-weight: 700; }
     .grid {
       display: grid;
       grid-template-columns: 1.05fr .95fr;
@@ -96,18 +125,61 @@
     .score.bad { color: var(--bad); font-weight: 700; }
     .score.even { color: var(--text); font-weight: 700; }
     .tiny { font-size: 12px; color: var(--muted); }
-    .player-cell { min-width: 250px; }
-    .best4 { color: var(--good); font-weight: 700; }
-    .bench { color: var(--muted); }
-    .player-entry { margin-bottom: 8px; }
+    .player-cell { min-width: 290px; }
+    .player-entry {
+      margin-bottom: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.05);
+      background: rgba(255,255,255,.02);
+    }
     .player-entry:last-child { margin-bottom: 0; }
+    .player-entry.counted {
+      background: rgba(74, 222, 128, .10);
+      border-color: rgba(74, 222, 128, .25);
+    }
+    .player-entry.bench {
+      opacity: .78;
+    }
+    .player-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .player-name {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      min-width: 0;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .badge.good {
+      color: var(--good);
+      border-color: rgba(74, 222, 128, .35);
+    }
+    .badge.warn {
+      color: var(--warn);
+      border-color: rgba(250, 204, 21, .35);
+    }
     .section-title { display:flex; justify-content:space-between; align-items:end; gap:12px; margin-bottom:10px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .footer { margin-top: 16px; color: var(--muted); font-size: 12px; }
     @media (max-width: 980px) {
-      .hero, .grid { grid-template-columns: 1fr; }
+      .hero, .grid, .summary-strip { grid-template-columns: 1fr; }
       .wrap { padding: 14px; }
       h1 { font-size: 24px; }
+      .status-row, .player-line { align-items: flex-start; }
     }
   </style>
 </head>
@@ -120,16 +192,36 @@
         <div class="controls">
           <button id="refreshBtn">Refresh live scores</button>
           <button id="seedBtn" class="secondary">Use workbook scores</button>
+          <div class="tiny">Auto-refreshes every 90 seconds</div>
         </div>
       </section>
       <section class="card status">
         <div class="pill" id="statusPill">Loading...</div>
-        <div><strong>Feed:</strong> <span id="feedName">-</span></div>
-        <div><strong>Event:</strong> <span id="eventName">-</span></div>
-        <div><strong>Updated:</strong> <span id="updatedAt">-</span></div>
-        <div><strong>Players matched:</strong> <span id="matchCount">-</span></div>
+        <div class="status-grid">
+          <div class="status-row"><span class="status-label">Mode</span><span class="status-value" id="modeText">-</span></div>
+          <div class="status-row"><span class="status-label">Cut penalties</span><span class="status-value" id="penaltyText">-</span></div>
+          <div class="status-row"><span class="status-label">Last live update</span><span class="status-value" id="lastLiveAt">-</span></div>
+          <div class="status-row"><span class="status-label">Event</span><span class="status-value" id="eventName">-</span></div>
+          <div class="status-row"><span class="status-label">Feed</span><span class="status-value" id="feedName">-</span></div>
+          <div class="status-row"><span class="status-label">Players matched</span><span class="status-value" id="matchCount">-</span></div>
+        </div>
       </section>
     </div>
+
+    <section class="summary-strip">
+      <div class="summary-box">
+        <strong>Leader</strong>
+        <div class="summary-value" id="leaderTeam">-</div>
+      </div>
+      <div class="summary-box">
+        <strong>Leading Score</strong>
+        <div class="summary-value" id="leaderScore">-</div>
+      </div>
+      <div class="summary-box">
+        <strong>Data State</strong>
+        <div class="summary-value" id="dataState">-</div>
+      </div>
+    </section>
 
     <div class="grid">
       <section class="card">
@@ -156,7 +248,7 @@
       <section class="card">
         <div class="section-title">
           <h2>Team breakdown</h2>
-          <div class="tiny">Green rows count towards the total</div>
+          <div class="tiny">Counted players are highlighted</div>
         </div>
         <div style="overflow:auto; max-height: 70vh;">
           <table>
@@ -180,23 +272,30 @@
   <script>
     const TEAMS_URL = "/data/teams.json";
     const LIVE_URL = "/api/live-scores";
-    
+
     const els = {
       standingsBody: document.getElementById("standingsBody"),
       teamsBody: document.getElementById("teamsBody"),
       statusPill: document.getElementById("statusPill"),
       feedName: document.getElementById("feedName"),
       eventName: document.getElementById("eventName"),
-      updatedAt: document.getElementById("updatedAt"),
       matchCount: document.getElementById("matchCount"),
       refreshBtn: document.getElementById("refreshBtn"),
-      seedBtn: document.getElementById("seedBtn")
+      seedBtn: document.getElementById("seedBtn"),
+      modeText: document.getElementById("modeText"),
+      penaltyText: document.getElementById("penaltyText"),
+      lastLiveAt: document.getElementById("lastLiveAt"),
+      leaderTeam: document.getElementById("leaderTeam"),
+      leaderScore: document.getElementById("leaderScore"),
+      dataState: document.getElementById("dataState")
     };
 
     const state = {
       teams: [],
       liveScores: null,
-      usingSeed: false
+      usingSeed: false,
+      staleLive: false,
+      lastLiveUpdatedAt: null
     };
 
     function normaliseName(name) {
@@ -229,13 +328,19 @@
       return !state.usingSeed && state.liveScores?.cutFinalized === true;
     }
 
+    function formatDateTime(value) {
+      if (!value) return "—";
+      return new Date(value).toLocaleString("en-GB");
+    }
+
     function getPlayerResult(player, seedScore) {
       if (state.usingSeed || !state.liveScores?.playerScores) {
         return {
           baseScore: seedScore,
           penalty: 0,
           score: seedScore,
-          meta: null
+          meta: null,
+          matched: false
         };
       }
 
@@ -248,7 +353,8 @@
           baseScore: seedScore,
           penalty: 0,
           score: seedScore,
-          meta: null
+          meta: null,
+          matched: false
         };
       }
 
@@ -262,7 +368,8 @@
         baseScore: live,
         penalty,
         score: live + penalty,
-        meta
+        meta,
+        matched: true
       };
     }
 
@@ -284,6 +391,7 @@
           ? sortable.slice(0, 4).reduce((sum, p) => sum + p.score, 0)
           : null;
         const all6 = players.reduce((sum, p) => sum + (Number.isFinite(p.score) ? p.score : 0), 0);
+        const matchedCount = players.filter((p) => p.matched).length;
 
         return {
           team: team.team,
@@ -291,6 +399,7 @@
           countedIdx,
           best4,
           all6,
+          matchedCount,
           countedNames: sortable.slice(0, 4).map((p) => p.name)
         };
       }).sort((a, b) => {
@@ -302,13 +411,33 @@
       });
     }
 
+    function updateStatusPanel(rows) {
+      const leader = rows[0];
+      const mode = state.usingSeed
+        ? "Workbook fallback"
+        : state.staleLive
+          ? "Live (stale)"
+          : "Live";
+
+      els.modeText.textContent = mode;
+      els.penaltyText.textContent = areCutPenaltiesActive() ? "Active" : "Inactive";
+      els.lastLiveAt.textContent = formatDateTime(state.lastLiveUpdatedAt);
+      els.dataState.textContent = mode;
+      els.leaderTeam.textContent = leader ? leader.team : "—";
+      els.leaderScore.textContent = leader ? fmt(leader.best4) : "—";
+    }
+
     function render() {
       const rows = computeRows();
+      updateStatusPanel(rows);
 
       els.standingsBody.innerHTML = rows.map((row, i) => `
         <tr>
           <td class="rank">${i + 1}</td>
-          <td><strong>${row.team}</strong></td>
+          <td>
+            <strong>${row.team}</strong>
+            <div class="tiny">${row.matchedCount}/6 matched</div>
+          </td>
           <td class="score ${scoreClass(row.best4)}">${fmt(row.best4)}</td>
           <td class="score ${scoreClass(row.all6)}">${fmt(row.all6)}</td>
           <td class="tiny">${row.countedNames.join(", ")}</td>
@@ -317,23 +446,41 @@
 
       els.teamsBody.innerHTML = rows.map((row) => {
         const html = row.players.map((p, idx) => {
-          const cls = row.countedIdx.has(idx) ? "best4" : "bench";
+          const counted = row.countedIdx.has(idx);
+          const penaltyBadge = p.penalty > 0
+            ? `<span class="badge warn">MC penalty ${fmt(p.penalty)}</span>`
+            : "";
+          const countedBadge = counted
+            ? `<span class="badge good">Counted</span>`
+            : `<span class="badge">Bench</span>`;
           const breakdown = p.penalty > 0
             ? `<div class="tiny">Base ${fmt(p.baseScore)} + penalty ${fmt(p.penalty)} = <strong>${fmt(p.score)}</strong></div>`
             : `<div class="tiny">Base ${fmt(p.baseScore)}</div>`;
 
           return `
-            <div class="player-entry ${cls}">
-              <div>${p.name}: <span class="score ${scoreClass(p.score)}">${fmt(p.score)}</span></div>
+            <div class="player-entry ${counted ? "counted" : "bench"}">
+              <div class="player-line">
+                <div class="player-name">
+                  <strong>${p.name}</strong>
+                  ${countedBadge}
+                  ${penaltyBadge}
+                </div>
+                <div class="score ${scoreClass(p.score)}">${fmt(p.score)}</div>
+              </div>
               ${breakdown}
               ${p.meta?.statusText ? `<div class="tiny">${p.meta.statusText}</div>` : ""}
+              ${!p.matched && !state.usingSeed ? `<div class="tiny">Using workbook score</div>` : ""}
             </div>
           `;
         }).join("");
 
         return `
           <tr>
-            <td><strong>${row.team}</strong><div class="tiny">Best 4: <span class="score ${scoreClass(row.best4)}">${fmt(row.best4)}</span></div></td>
+            <td>
+              <strong>${row.team}</strong>
+              <div class="tiny">Best 4: <span class="score ${scoreClass(row.best4)}">${fmt(row.best4)}</span></div>
+              <div class="tiny">${row.matchedCount}/6 players matched live</div>
+            </td>
             <td class="player-cell">${html}</td>
           </tr>
         `;
@@ -343,53 +490,74 @@
     function setStatus(text, tone = "neutral") {
       els.statusPill.textContent = text;
       els.statusPill.style.color = tone === "good" ? "var(--good)" : tone === "bad" ? "var(--bad)" : tone === "warn" ? "var(--warn)" : "var(--muted)";
-      els.statusPill.style.borderColor = tone === "good" ? "rgba(74, 222, 128, .4)" : tone === "bad" ? "rgba(248, 113, 113, .4)" : "var(--line)";
+      els.statusPill.style.borderColor = tone === "good" ? "rgba(74, 222, 128, .4)" : tone === "bad" ? "rgba(248, 113, 113, .4)" : tone === "warn" ? "rgba(250, 204, 21, .4)" : "var(--line)";
     }
 
     async function loadTeams() {
       const res = await fetch(TEAMS_URL, { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(`Could not load teams (${res.status})`);
+      }
       state.teams = await res.json();
     }
 
-    async function refreshLive() {
-  setStatus("Refreshing live scores...");
-  try {
-    const res = await fetch(LIVE_URL, { cache: "no-store" });
-    const text = await res.text();
-
-    let json;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      throw new Error(`API did not return JSON (${res.status}). First 120 chars: ${text.slice(0, 120)}`);
+    function applyLivePayload(json) {
+      state.liveScores = json;
+      state.usingSeed = false;
+      state.staleLive = false;
+      state.lastLiveUpdatedAt = json.updatedAt || state.lastLiveUpdatedAt;
+      els.feedName.textContent = json.source || "Live feed";
+      els.eventName.textContent = json.eventName || "Masters Tournament";
+      els.matchCount.textContent = json.playerCount ?? Object.keys(json.playerScores || {}).length;
     }
 
-    if (!json.ok) throw new Error(json.error || `Live feed failed (${res.status}).`);
+    async function refreshLive() {
+      setStatus("Refreshing live scores...");
+      try {
+        const res = await fetch(LIVE_URL, { cache: "no-store" });
+        const text = await res.text();
 
-    state.liveScores = json;
-    state.usingSeed = false;
-    els.feedName.textContent = json.source || "Live feed";
-    els.eventName.textContent = json.eventName || "Masters Tournament";
-    els.updatedAt.textContent = json.updatedAt
-      ? new Date(json.updatedAt).toLocaleString("en-GB")
-      : "—";
-    els.matchCount.textContent = json.playerCount ?? Object.keys(json.playerScores || {}).length;
-    setStatus(`Live scores loaded. Cut penalties ${json.cutFinalized ? "active" : "inactive"}.`, "good");
-    render();
-  } catch (err) {
-    setStatus(`Live refresh failed: ${err.message}. Showing workbook scores.`, "bad");
-    state.usingSeed = true;
-    els.feedName.textContent = "Workbook fallback";
-    els.eventName.textContent = "Seed scores from XLSX";
-    els.updatedAt.textContent = "—";
-    els.matchCount.textContent = "—";
-    render();
-  }
-}
+        let json;
+        try {
+          json = JSON.parse(text);
+        } catch {
+          throw new Error(`API did not return JSON (${res.status})`);
+        }
 
+        if (!json.ok) throw new Error(json.error || `Live feed failed (${res.status}).`);
+
+        applyLivePayload(json);
+        setStatus(`Live scores loaded. Cut penalties ${json.cutFinalized ? "active" : "inactive"}.`, "good");
+        render();
+      } catch (err) {
+        if (state.liveScores) {
+          state.usingSeed = false;
+          state.staleLive = true;
+          setStatus(`Live refresh failed: ${err.message}. Showing last successful live data.`, "warn");
+          render();
+          return;
+        }
+
+        state.usingSeed = true;
+        state.staleLive = false;
+        setStatus(`Live refresh failed: ${err.message}. Showing workbook scores.`, "bad");
+        els.feedName.textContent = "Workbook fallback";
+        els.eventName.textContent = "Seed scores from XLSX";
+        els.matchCount.textContent = "—";
+        render();
+      }
+    }
 
     async function init() {
-      await loadTeams();
+      try {
+        await loadTeams();
+      } catch (err) {
+        setStatus(`Could not load team data: ${err.message}`, "bad");
+        els.feedName.textContent = "Unavailable";
+        els.eventName.textContent = "No team data loaded";
+        return;
+      }
+
       state.usingSeed = true;
       render();
       await refreshLive();
@@ -399,10 +567,10 @@
     els.refreshBtn.addEventListener("click", refreshLive);
     els.seedBtn.addEventListener("click", () => {
       state.usingSeed = true;
+      state.staleLive = false;
       setStatus("Showing workbook scores. Cut penalties inactive.", "warn");
       els.feedName.textContent = "Workbook fallback";
       els.eventName.textContent = "Seed scores from XLSX";
-      els.updatedAt.textContent = "—";
       els.matchCount.textContent = "—";
       render();
     });
